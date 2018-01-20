@@ -10,36 +10,34 @@ usage() {
 
 
 mkpart() {
+	vgname=$(sudo vgs --noheadings |awk '{print $1 }')
+
 	printf "\n"
+
 	sudo lvcreate -n $lvname -L $lvsize system
-	printf ""
-	sudo mkfs.ext4 /dev/mapper/system-${lvname}
+	sudo mkfs.ext4 /dev/mapper/${vgname}-${lvname}
 	sudo mkdir /${lvname}
-	sudo chown -R morphalus: /${lvname}
-	sudo mount /dev/mapper/system-${lvname} /${lvname}
+	sudo chown -R ${USER}: /${lvname}
+	sudo mount /dev/mapper/${vgname}-${lvname} /${lvname}
 
 	printf "\n"
 	printf "Partition created and mounted but add in fstab:\n"
-	printf "fstab content: /dev/mapper/system-%s /%s ext4 rw,noatime,data=ordered 0 0\n" "$lvname" "$lvname"
+	printf "fstab content: /dev/mapper/${vgname}-%s /%s ext4 rw,noatime,data=ordered 0 0\n" "$lvname" "$lvname"
 }
 
 
-[[ $# -ne 4 ]] && usage
-
 interactive=1
 
-while getopts "fs:n:" opt; do
+while getopts "s:n:y" opt; do
 	case "$opt" in
 		s)
 			lvsize="$OPTARG"
 			;;
-		n)*)
-			exit 0
-			;;
+		n)
 			lvname="$OPTARG"
 			;;
 		y)
-			[[ -n OPTARG ]] && interactive=0
+			[[ -n $OPTARG ]] && interactive=0
 			;;
 		*)
 			usage
@@ -49,6 +47,8 @@ while getopts "fs:n:" opt; do
 			;;
 	esac
 done
+
+[ -z $lvsize ] || [ -z $lvname ] && usage
 
 printf "Will create a logical volume with these properties:\n"
 printf -- "- lvname: %s\n" "$lvname"
